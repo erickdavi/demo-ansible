@@ -1,0 +1,47 @@
+---
+- hosts: webservers
+  vars:
+    http_port: 80
+    max_clients: 200
+    deploy_path: /var/www/html/
+  remote_user: erickdavi
+  tasks:
+  - name: instala ou atualiza o servidor web apache
+    apt:
+      name: apache2
+      state: latest
+  - name: instala ou atualiza o git
+    apt:
+      name: git
+      state: latest
+    become: true
+  - name: copia security.conf para /etc/apache2/conf-enabled/
+    template: 
+      src: template/security.conf.j2 
+      dest: /etc/apache2/conf-enabled/security.conf
+    become: true
+  - name: copia 000-default para /etc/apache2/sites-available
+    template: 
+      src: template/000-default.conf.j2
+      dest: /etc/apache2/sites-available/000-default.conf
+    become: true
+    notify:
+    - restart apache
+  - name: certifica de que o apache está rodando
+    service:
+      name: apache2
+      state: started
+    become: true
+  - name: deploy
+    git: 
+      repo: https://github.com/erickdavi/basic-html.git
+      dest: /var/www/app
+      force: yes
+      recursive: no
+    become: true
+  handlers:
+    - name: restart apache
+      service:
+        name: apache2
+        state: restarted
+      become: true
